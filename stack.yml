@@ -1,0 +1,29 @@
+version: '3.9'
+
+services:
+  sanguchp:
+    image: ghcr.io/martinsangucho/finalquintoa:1.0.0
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.sanguchp.entrypoints=http"
+        - "traefik.http.routers.sanguchp.rule=Host(`sanguchp.byronrm.com`)"
+        - "traefik.http.middlewares.sanguchp-https-redirect.redirectscheme.scheme=https"
+        - "traefik.http.routers.sanguchp.middlewares=sanguchp-https-redirect"
+        - "traefik.http.routers.sanguchp-secure.entrypoints=https"
+        - "traefik.http.routers.sanguchp-secure.rule=Host(`sanguchp.byronrm.com`)"
+        - "traefik.http.routers.sanguchp-secure.tls=true"
+        - "traefik.http.routers.sanguchp-secure.tls.certresolver=http"
+        - "traefik.http.routers.sanguchp-secure.service=sanguchp"
+        - "traefik.http.services.sanguchp.loadbalancer.server.port=5000"
+    networks:
+      - traefik-public
+
+networks:
+  traefik-public:
+    external: true

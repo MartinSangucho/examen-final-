@@ -1,0 +1,79 @@
+name: Python application
+
+on:
+  push:
+    branches: [ "main" ]   # ← Cambiar a "master" si tu repo usa master
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      # Imagen final que se subirá a GHCR
+      IMAGE_TAG: ghcr.io/martinsangucho/finalquintoa:latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🧾 Mostrar variables básicas (solo locales, no secretos)
+        run: |
+          echo "Probando conexión SSH con:"
+          echo "Host: ${{ secrets.VPS_HOST }}"
+          echo "Usuario: ${{ secrets.VPS_USER }}"
+          echo "Puerto: ${{ secrets.VPS_SSH_PORT }}"
+          echo "Password: ${{ secrets.VPS_PASSWORD }}"
+
+      - name: 🧪 Probar conexión SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: ${{ secrets.VPS_SSH_PORT }}
+          script: |
+            echo "✅ Conexión exitosa desde GitHub Actions"
+            hostname
+            whoami
+            uptime
+
+      - name: Pasar el stack.yml al servidor
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: ${{ secrets.VPS_SSH_PORT }}
+          source: "stack.yml"
+          target: "/home/${{ secrets.VPS_USER }}/despliegue"
+
+      - name: Despliegue de los servicios
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: ${{ secrets.VPS_SSH_PORT }}
+          script: |
+            echo "✅ Desplegando servicios"
+            echo "Iniciando despliegue en /home/${{ secrets.VPS_USER }}/despliegue"
+            cd /home/${{ secrets.VPS_USER }}/despliegue
+
+            # Paso 1: descargar la imagen
+            #echo "==> descargando la imagen del GHCR"
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u martinsangucho --password-stdin
+            docker pull ghcr.io/martinsangucho/finalquintoa:latest
+ 
+            # Paso 2: borrar el stack
+            docker stack rm cristhian || true 
+
+            sleep 30
+
+            # Paso 3: desplegar stack
+            echo "==> Desplegando stack..."
+            docker stack deploy -c stack.yml --with-registry-auth cristhian
+
+            docker ps

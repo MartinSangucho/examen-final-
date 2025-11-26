@@ -1,0 +1,7 @@
+[
+  "test_app.py::TestApplication::test_1_home_status_code",
+  "test_app.py::TestApplication::test_2_home_content",
+  "test_app.py::TestApplication::test_3_nonexistent_route_404",
+  "test_app.py::TestApplication::test_home_status_code",
+  "test_app.py::TestApplication::test_predict_status_code"
+]
