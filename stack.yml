@@ -1,8 +1,10 @@
 version: '3.9'
 
 services:
-  sanguchp:
-    image: ghcr.io/martinsangucho/finalquintoa:1.0.0
+  # 1. NOMBRE DEL SERVICIO: CRITERIO SEGUNDO APELLIDO
+  ulloa:
+    # 2. IMAGEN: CRITERIO SEGUNDO APELLIDO y VERSIÓN
+    image: ghcr.io/martinsangucho/ulloa:1.0.5
     deploy:
       replicas: 1
       resources:
@@ -10,17 +12,26 @@ services:
           cpus: "0.50"
           memory: 512M
       labels:
+        # Habilitar Traefik
         - "traefik.enable=true"
-        - "traefik.http.routers.sanguchp.entrypoints=http"
-        - "traefik.http.routers.sanguchp.rule=Host(`sanguchp.byronrm.com`)"
-        - "traefik.http.middlewares.sanguchp-https-redirect.redirectscheme.scheme=https"
-        - "traefik.http.routers.sanguchp.middlewares=sanguchp-https-redirect"
-        - "traefik.http.routers.sanguchp-secure.entrypoints=https"
-        - "traefik.http.routers.sanguchp-secure.rule=Host(`sanguchp.byronrm.com`)"
-        - "traefik.http.routers.sanguchp-secure.tls=true"
-        - "traefik.http.routers.sanguchp-secure.tls.certresolver=http"
-        - "traefik.http.routers.sanguchp-secure.service=sanguchp"
-        - "traefik.http.services.sanguchp.loadbalancer.server.port=5000"
+        
+        # --- HTTP Router (Redirección a HTTPS) ---
+        - "traefik.http.routers.ulloa.entrypoints=http"
+        # 3. CRITERIO SUBDOMINIO: Host correcto
+        - "traefik.http.routers.ulloa.rule=Host(`ulloa.byronrm.com`)" 
+        - "traefik.http.middlewares.ulloa-https-redirect.redirectscheme.scheme=https"
+        - "traefik.http.routers.ulloa.middlewares=ulloa-https-redirect"
+
+        # --- HTTPS Router (Servicio Seguro) ---
+        - "traefik.http.routers.ulloa-secure.entrypoints=https"
+        # 3. CRITERIO SUBDOMINIO: Host correcto
+        - "traefik.http.routers.ulloa-secure.rule=Host(`ulloa.byronrm.com`)"
+        - "traefik.http.routers.ulloa-secure.tls=true"
+        - "traefik.http.routers.ulloa-secure.tls.certresolver=http"
+        - "traefik.http.routers.ulloa-secure.service=ulloa"
+        
+        # Servicio y Puerto interno de Flask (5000 por defecto)
+        - "traefik.http.services.ulloa.loadbalancer.server.port=5000"
     networks:
       - traefik-public
 
