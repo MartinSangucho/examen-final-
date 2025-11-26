@@ -15,7 +15,8 @@ jobs:
 
     env:
       # CRITERIO IMAGEN: Define la imagen correcta (ulloa:1.0.5)
-      IMAGE_TAG: ghcr.io/${{ github.repository_owner }}/ulloa:1.0.5
+      # CORRECCIÓN CLAVE: Usamos 'toLowerCase()' para asegurar que el usuario esté en minúsculas.
+      IMAGE_TAG: ghcr.io/${{ toLower(github.repository_owner) }}/ulloa:1.0.5
 
     steps:
       - uses: actions/checkout@v4
@@ -35,20 +36,21 @@ jobs:
 
       - name: Ejecutar pruebas (PyTests)
         run: |
-          pytest # CORRECCIÓN: Pytest buscará el archivo 'test_app.py' en la raíz.
+          pytest # Pytest buscará el archivo 'test_app.py' en la raíz.
 
       - name: 🔐 Login to GitHub Container Registry (Build)
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.repository_owner }} # Resuelve a martinsangucho
+          username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }} # Token para publicar
 
       - name: 🏗️ Build and push Docker image (CRITERIO IMAGEN)
         uses: docker/build-push-action@v6
         with:
           push: true
-          tags: ${{ env.IMAGE_TAG }} # Publica la imagen ulloa:1.0.5
+          # Usamos la etiqueta ya en minúsculas
+          tags: ${{ env.IMAGE_TAG }} 
 
       # --- PASOS DE DESPLIEGUE CONTINUO (CD) ---
 
