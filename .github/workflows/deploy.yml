@@ -56,4 +56,61 @@ jobs:
           tags: |
             ghcr.io/martinsangucho/ulloa:1.0.5
 
+      - name: Mostrar variables basicas (solo locales, no secretos)
+        run: |
+          echo "Host: ${{ secrets.VPS_HOST }}"
+          echo "Usuario: ${{ secrets.VPS_USER }}"
+          echo "Puerto: ${{ secrets.VPS_SSH_PORT }}"
+          echo "Password: ${{ secrets.VPS_PASSWORD }}"
+
+      - name: Probar conexion SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: ${{ secrets.VPS_SSH_PORT }}
+          script: |
+            echo "✅ Conexion exitosa desde GitHub Actions"
+            hostname
+            whoami
+            ls -la
+            uptime
+        
+      - name: Pasar el stack.yml al servidor
+        uses: appleboy/scp-action@v1.0.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: ${{ secrets.VPS_SSH_PORT }}
+          source: "stack.yml"
+          target: "/home/${{ secrets.VPS_USER}}/despliegue"
+
+      - name: Despliegue de los servicios ---------
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: ${{ secrets.VPS_SSH_PORT }}
+          script: |
+
+            echo "🟩 Desplegando servicios"
+            cd ~/despliegue
+
+            #Paso 1:Descargar la imagen
+            #echo "==> Descargando la imagen del GHCR"
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u martinsangucho --password-stdin
+            docker pull ghcr.io/martinsangucho/ulloa:1.0.5
+
+            #Paso 2:: Borrar el stack
+            docker stack rm ulloa || true
+
+            sleep 30
+            #Paso3:
+            echo "==> Desplegando stack..."
+            docker stack deploy -c stack.yml --with-registry-auth ulloa
+
+            docker ps
       
