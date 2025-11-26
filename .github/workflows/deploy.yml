@@ -102,7 +102,7 @@ jobs:
             #Paso 1:Descargar la imagen
             #echo "==> Descargando la imagen del GHCR"
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u martinsangucho --password-stdin
-            docker pull ghcr.io/martinsangucho/ulloa:1.0.5
+            ghcr.io/martinsangucho/ulloa:1.0.5
 
             #Paso 2:: Borrar el stack
             docker stack rm ulloa || true
