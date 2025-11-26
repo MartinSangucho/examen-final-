@@ -13,7 +13,6 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      # CRITERIO IMAGEN: Corregido a 'ulloa' y versión '1.0.5'
       IMAGE_TAG: ghcr.io/${{ github.repository_owner }}/ulloa:1.0.5
 
     steps:
@@ -22,18 +21,18 @@ jobs:
       - name: 🧾 Mostrar variables básicas (solo locales, no secretos)
         run: |
           echo "Probando conexión SSH con:"
-          echo "Host: ${{ secrets.VPS_HOST }}"
-          echo "Usuario: ${{ secrets.VPS_USER }}"
-          echo "Puerto: ${{ secrets.VPS_SSH_PORT }}"
+          # echo "Host: ${{ secrets.VPS_HOST }}"
+          # echo "Usuario: ${{ secrets.VPS_USER }}"
+          # echo "Puerto: ${{ secrets.VPS_SSH_PORT }}"
           echo "Password: *** (redacted)"
 
       - name: 🧪 Probar conexión SSH
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          password: ${{ secrets.VPS_PASSWORD }}
-          port: ${{ secrets.VPS_SSH_PORT }}
+          host: ${{ secrets.VPS_HOST }}          # SECRET
+          username: ${{ secrets.VPS_USER }}      # SECRET
+          password: ${{ secrets.VPS_PASSWORD }}  # SECRET
+          port: ${{ secrets.VPS_SSH_PORT }}      # SECRET
           script: |
             echo "✅ Conexión exitosa desde GitHub Actions"
             hostname
@@ -43,38 +42,31 @@ jobs:
       - name: Pasar el stack.yml al servidor
         uses: appleboy/scp-action@v1
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          password: ${{ secrets.VPS_PASSWORD }}
-          port: ${{ secrets.VPS_SSH_PORT }}
+          host: ${{ secrets.VPS_HOST }}          # SECRET
+          username: ${{ secrets.VPS_USER }}      # SECRET
+          password: ${{ secrets.VPS_PASSWORD }}  # SECRET
+          port: ${{ secrets.VPS_SSH_PORT }}      # SECRET
           source: "stack.yml"
-          target: "/home/${{ secrets.VPS_USER }}/despliegue"
+          target: "/home/${{ secrets.VPS_USER }}/despliegue"  # SECRET
 
       - name: Despliegue de los servicios
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          password: ${{ secrets.VPS_PASSWORD }}
-          port: ${{ secrets.VPS_SSH_PORT }}
+          host: ${{ secrets.VPS_HOST }}          # SECRET
+          username: ${{ secrets.VPS_USER }}      # SECRET
+          password: ${{ secrets.VPS_PASSWORD }}  # SECRET
+          port: ${{ secrets.VPS_SSH_PORT }}      # SECRET
           script: |
             echo "✅ Desplegando servicios"
-            echo "Iniciando despliegue en /home/${{ secrets.VPS_USER }}/despliegue"
-            cd /home/${{ secrets.VPS_USER }}/despliegue
+            echo "Iniciando despliegue en /home/${{ secrets.VPS_USER }}/despliegue"   # SECRET
+            cd /home/${{ secrets.VPS_USER }}/despliegue                               # SECRET
 
-            # Paso 1: descargar la imagen (Usando la variable IMAGE_TAG correcta)
             echo "==> Descargando imagen: ${{ env.IMAGE_TAG }}"
-            # Usamos GITHUB_TOKEN para el login, es más seguro que GHCR_PAT
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin  # SECRET
             docker pull ${{ env.IMAGE_TAG }}
-  
-            # Paso 2: borrar el stack (CRITERIO STACK: stack debe llamarse 'ulloa')
-            docker stack rm ulloa || true 
 
+            docker stack rm ulloa || true 
             sleep 30
 
-            # Paso 3: desplegar stack (CRITERIO STACK: Desplegando el stack 'ulloa')
             echo "==> Desplegando stack ulloa..."
             docker stack deploy -c stack.yml --with-registry-auth ulloa
-
-            docker ps
