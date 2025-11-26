@@ -2,7 +2,7 @@ name: Python application
 
 on:
   push:
-    branches: [ "ulloa" ]   # ¡Rama correcta!
+    branches: [ "ulloa" ]
 
 permissions:
   contents: read
@@ -21,18 +21,18 @@ jobs:
       - name: 🧾 Mostrar variables básicas (solo locales, no secretos)
         run: |
           echo "Probando conexión SSH con:"
-          # echo "Host: ${{ secrets.VPS_HOST }}"
-          # echo "Usuario: ${{ secrets.VPS_USER }}"
-          # echo "Puerto: ${{ secrets.VPS_SSH_PORT }}"
+          echo "Host: ${{ secrets.VPS_HOST }}"
+          echo "Usuario: ${{ secrets.VPS_USER }}"
+          echo "Puerto: ${{ secrets.VPS_SSH_PORT }}"
           echo "Password: *** (redacted)"
 
       - name: 🧪 Probar conexión SSH
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.VPS_HOST }}          # SECRET
-          username: ${{ secrets.VPS_USER }}      # SECRET
-          password: ${{ secrets.VPS_PASSWORD }}  # SECRET
-          port: ${{ secrets.VPS_SSH_PORT }}      # SECRET
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: ${{ secrets.VPS_SSH_PORT }}
           script: |
             echo "✅ Conexión exitosa desde GitHub Actions"
             hostname
@@ -42,30 +42,30 @@ jobs:
       - name: Pasar el stack.yml al servidor
         uses: appleboy/scp-action@v1
         with:
-          host: ${{ secrets.VPS_HOST }}          # SECRET
-          username: ${{ secrets.VPS_USER }}      # SECRET
-          password: ${{ secrets.VPS_PASSWORD }}  # SECRET
-          port: ${{ secrets.VPS_SSH_PORT }}      # SECRET
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: ${{ secrets.VPS_SSH_PORT }}
           source: "stack.yml"
-          target: "/home/${{ secrets.VPS_USER }}/despliegue"  # SECRET
+          target: "/home/${{ secrets.VPS_USER }}/despliegue"
 
       - name: Despliegue de los servicios
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.VPS_HOST }}          # SECRET
-          username: ${{ secrets.VPS_USER }}      # SECRET
-          password: ${{ secrets.VPS_PASSWORD }}  # SECRET
-          port: ${{ secrets.VPS_SSH_PORT }}      # SECRET
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: ${{ secrets.VPS_SSH_PORT }}
           script: |
             echo "✅ Desplegando servicios"
-            echo "Iniciando despliegue en /home/${{ secrets.VPS_USER }}/despliegue"   # SECRET
-            cd /home/${{ secrets.VPS_USER }}/despliegue                               # SECRET
+            echo "Iniciando despliegue en /home/${{ secrets.VPS_USER }}/despliegue"
+            cd /home/${{ secrets.VPS_USER }}/despliegue
 
             echo "==> Descargando imagen: ${{ env.IMAGE_TAG }}"
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin  # SECRET
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
             docker pull ${{ env.IMAGE_TAG }}
 
-            docker stack rm ulloa || true 
+            docker stack rm ulloa || true
             sleep 30
 
             echo "==> Desplegando stack ulloa..."
