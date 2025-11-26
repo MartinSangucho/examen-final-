@@ -35,7 +35,7 @@ jobs:
 
       - name: Ejecutar pruebas (PyTests)
         run: |
-          pytest tests # Asegúrate que tu carpeta de pruebas se llame 'tests'
+          pytest # CORRECCIÓN: Pytest buscará el archivo 'test_app.py' en la raíz.
 
       - name: 🔐 Login to GitHub Container Registry (Build)
         uses: docker/login-action@v3
