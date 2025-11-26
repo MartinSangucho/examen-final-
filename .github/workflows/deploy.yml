@@ -1,73 +1,59 @@
-name: ⚙️ CI/CD Combinado - Despliegue ulloa
+name: ⚙️ CI/CD - Despliegue Final de ulloa
 
 on:
   push:
-    branches: [ "ulloa" ] # CRITERIO RAMA: Solo se activa en la rama 'ulloa'
+    # CRITERIO RAMA: Se activa solo en la rama 'ulloa'
+    branches: [ "ulloa" ]
 
 permissions:
   contents: read
-  packages: write # Necesario para publicar y descargar imágenes de GHCR.
+  packages: write # Permiso necesario para publicar/descargar imágenes de GHCR.
 
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
 
     env:
-      # CRITERIO IMAGEN: Definimos la etiqueta para construir, empujar y descargar.
+      # CRITERIO IMAGEN: Define la imagen correcta (ulloa:1.0.5)
       IMAGE_TAG: ghcr.io/${{ github.repository_owner }}/ulloa:1.0.5
 
     steps:
-      - uses: actions/checkout@v4 # 1. Descargar el código
+      - uses: actions/checkout@v4
 
-      # --- PASOS DE INTEGRACIÓN CONTINUA (CI: Tests y Build) ---
+      # --- PASOS DE INTEGRACIÓN CONTINUA (CI) ---
 
-      - name: 🐍 Set up Python and Dependencies
-        uses: actions/setup-python@v5
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v3
         with:
-          python-version: "3.11" # Usamos una versión moderna de Python
+          python-version: "3.11"
 
-      - name: 📦 Install dependencies
-        run: pip install -r requirements.txt pytest # Instalar dependencias y pytest
+      # CRITERIO 3: Instalar dependencias y pytest para la validación
+      - name: Instalar dependencias y pytest
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
 
-      - name: 🧪 Run Tests (CRITERIO 3: Pruebas)
-        run: pytest # Ejecutar pruebas antes de construir la imagen
+      - name: Ejecutar pruebas (PyTests)
+        run: |
+          pytest tests # Asegúrate que tu carpeta de pruebas se llame 'tests'
 
-      - name: 🔐 Login to GitHub Container Registry
+      - name: 🔐 Login to GitHub Container Registry (Build)
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.repository_owner }} # Usamos el dueño del repositorio
-          password: ${{ secrets.GITHUB_TOKEN }} # Usamos el token estándar
+          username: ${{ github.repository_owner }} # Resuelve a martinsangucho
+          password: ${{ secrets.GITHUB_TOKEN }} # Token para publicar
 
       - name: 🏗️ Build and push Docker image (CRITERIO IMAGEN)
         uses: docker/build-push-action@v6
         with:
           push: true
-          tags: ${{ env.IMAGE_TAG }} # Usar la etiqueta definida
+          tags: ${{ env.IMAGE_TAG }} # Publica la imagen ulloa:1.0.5
 
-      # --- PASOS DE DESPLIEGUE CONTINUO (CD: SSH y Deploy) ---
-
-      - name: 🧾 Mostrar variables básicas (SOLO el HOST y USER)
-        run: |
-          echo "Probando conexión SSH con:"
-          echo "Host: ${{ secrets.VPS_HOST }}"
-          echo "Usuario: ${{ secrets.VPS_USER }}"
-          echo "Puerto: ${{ secrets.VPS_SSH_PORT }}"
-          # IMPORTANTE: No exponer secretos sensibles como VPS_PASSWORD en logs
-          echo "Password: *** (redacted)"
-
-      - name: 🧪 Probar conexión SSH
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          password: ${{ secrets.VPS_PASSWORD }}
-          port: ${{ secrets.VPS_SSH_PORT }}
-          script: |
-            echo "✅ Conexión exitosa desde GitHub Actions"
+      # --- PASOS DE DESPLIEGUE CONTINUO (CD) ---
 
       - name: Pasar el stack.yml al servidor
-        uses: appleboy/scp-action@v1
+        uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
@@ -77,19 +63,18 @@ jobs:
           target: "/home/${{ secrets.VPS_USER }}/despliegue"
 
       - name: Despliegue de los servicios (CRITERIO STACK)
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
           port: ${{ secrets.VPS_SSH_PORT }}
           script: |
-            echo "✅ Desplegando servicios - INTENTO FINAL"
-            cd /home/${{ secrets.VPS_USER }}/despliegue
+            echo "🟩 Desplegando stack ulloa con la imagen ${{ env.IMAGE_TAG }}"
+            cd ~/despliegue
 
-            # 1. Login para descargar la imagen recién creada
-            echo "==> Descargando imagen: ${{ env.IMAGE_TAG }}"
-            # Usamos el token del flujo para el pull
+            # 1. Login para descargar la imagen recién publicada
+            # Usamos GITHUB_TOKEN y el dueño del repositorio para el Pull
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
             docker pull ${{ env.IMAGE_TAG }}
 
@@ -97,7 +82,7 @@ jobs:
             docker stack rm ulloa || true
             sleep 30
 
-            # 3. Desplegar (CRITERIO 1: ulloa)
+            # 3. Desplegar stack (CRITERIO 1: ulloa)
             echo "==> Desplegando stack ulloa..."
             docker stack deploy -c stack.yml --with-registry-auth ulloa
 
