@@ -1,39 +1,26 @@
 version: "3.8"
 
 services:
-  # Servicio de la aplicación (CRITERIO 1: ulloa)
-  ulloa:
-    # Imagen de la aplicación (CRITERIO 2: ulloa:1.0.5)
-    image: ghcr.io/martinsangucho/ulloa:1.0.5
-    deploy:
-      replicas: 1
-      labels:
-        # Habilitar Traefik
-        - "traefik.enable=true"
-        
-        # --- Router HTTP (Redirección a HTTPS) ---
-        - "traefik.http.routers.ulloa.entrypoints=http"
-        # CRITERIO 4: Host ulloa.byronrm.com
-        - "traefik.http.routers.ulloa.rule=Host(`ulloa.byronrm.com`)"
-        - "traefik.http.middlewares.ulloa-https-redirect.redirectscheme.scheme=https"
-        - "traefik.http.routers.ulloa.middlewares=ulloa-https-redirect"
-        
-        # --- Router HTTPS (Servicio Seguro) ---
-        - "traefik.http.routers.ulloa-secure.entrypoints=https"
-        # CRITERIO 4: Host ulloa.byronrm.com
-        - "traefik.http.routers.ulloa-secure.rule=Host(`ulloa.byronrm.com`)"
-        - "traefik.http.routers.ulloa-secure.tls=true"
-        # ¡CORRECCIÓN CLAVE! Usa 'le' (Let's Encrypt) para generar el certificado
-        - "traefik.http.routers.ulloa-secure.tls.certresolver=le" 
-        - "traefik.http.routers.ulloa-secure.service=ulloa"
-        
-        # Puerto de la aplicación (Flask corre en 5000)
-        - "traefik.http.services.ulloa.loadbalancer.server.port=5000"
-        - "traefik.docker.network=traefik-public"
-    # Conexión a la red pública de Traefik
-    networks:
-      - traefik-public
+ulloa:
+image: ghcr.io/martinsangucho/ulloa:1.0.5
+deploy:
+replicas: 1
+labels:
+- "traefik.enable=true"
+- "traefik.http.routers.ulloa.entrypoints=http"
+- "traefik.http.routers.ulloa.rule=Host(ulloa.byronrm.com)"
+- "traefik.http.middlewares.ulloa-https-redirect.redirectscheme.scheme=https"
+- "traefik.http.routers.ulloa.middlewares=ulloa-https-redirect"
+- "traefik.http.routers.ulloa-secure.entrypoints=https"
+- "traefik.http.routers.ulloa-secure.rule=Host(ulloa.byronrm.com)"
+- "traefik.http.routers.ulloa-secure.tls=true"
+- "traefik.http.routers.ulloa-secure.tls.certresolver=http"
+- "traefik.http.routers.ulloa-secure.service=ulloa"
+- "traefik.http.services.ulloa.loadbalancer.server.port=5000"
+- "traefik.docker.network=traefik-public"
+networks:
+- traefik-public
 
 networks:
-  traefik-public:
-    external: true
+traefik-public:
+external: true
