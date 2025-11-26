@@ -1,25 +1,26 @@
-name: Build and Push Image
+version: "3.8"
 
-on:
-  push:
-    branches: [ "ulloa" ]
+services:
+ulloa:
+image: ghcr.io/martinsangucho/ulloa:1.0.5
+deploy:
+replicas: 1
+labels:
+- "traefik.enable=true"
+- "traefik.http.routers.ulloa.entrypoints=http"
+- "traefik.http.routers.ulloa.rule=Host(ulloa.byronrm.com)"
+- "traefik.http.middlewares.ulloa-https-redirect.redirectscheme.scheme=https"
+- "traefik.http.routers.ulloa.middlewares=ulloa-https-redirect"
+- "traefik.http.routers.ulloa-secure.entrypoints=https"
+- "traefik.http.routers.ulloa-secure.rule=Host(ulloa.byronrm.com)"
+- "traefik.http.routers.ulloa-secure.tls=true"
+- "traefik.http.routers.ulloa-secure.tls.certresolver=http"
+- "traefik.http.routers.ulloa-secure.service=ulloa"
+- "traefik.http.services.ulloa.loadbalancer.server.port=5000"
+- "traefik.docker.network=traefik-public"
+networks:
+- traefik-public
 
-permissions:
-  packages: write
-  contents: read
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Login GHCR
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
-      - name: Build Docker image
-        run: docker build -t ghcr.io/martinsangucho/ulloa:1.0.5 
-
-      - name: Push Docker image
-        run: docker push ghcr.io/martinsangucho/ulloa:1.0.5
+networks:
+traefik-public:
+external: true

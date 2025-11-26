@@ -1,72 +1,58 @@
-name: Python application
+name: Build, Test and Deploy
 
 on:
   push:
-    branches: [ "ulloa" ]
+    branches: [ ulloa ]
 
 permissions:
   contents: read
   packages: write
 
 jobs:
-  build:
+  build-test-push:
     runs-on: ubuntu-latest
 
-    env:
-      IMAGE_TAG: ghcr.io/martinsangucho/ulloa:1.0.5
-
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: 🧾 Mostrar variables básicas (solo locales, no secretos)
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
         run: |
-          echo "Probando conexión SSH con:"
-          echo "Host: ${{ secrets.VPS_HOST }}"
-          echo "Usuario: ${{ secrets.VPS_USER }}"
-          echo "Puerto: ${{ secrets.VPS_SSH_PORT }}"
-          echo "Password: *** (redacted)"
+          pip install flask pytest ruff
 
-      - name: 🧪 Probar conexión SSH
-        uses: appleboy/ssh-action@v1
+      - name: Add project to PYTHONPATH
+        run: echo "PYTHONPATH=$PWD" >> $GITHUB_ENV
+
+      - name: Ruff Lint
+        run: ruff check .
+
+      - name: Run Pytest
+        run: pytest -q
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          password: ${{ secrets.VPS_PASSWORD }}
-          port: ${{ secrets.VPS_SSH_PORT }}
-          script: |
-            echo "✅ Conexión exitosa desde GitHub Actions"
-            hostname
-            whoami
-            uptime
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pasar el stack.yml al servidor
-        uses: appleboy/scp-action@v1
+      - name: Build and Push Docker image
+        uses: docker/build-push-action@v4
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          password: ${{ secrets.VPS_PASSWORD }}
-          port: ${{ secrets.VPS_SSH_PORT }}
-          source: "stack.yml"
-          target: "/home/${{ secrets.VPS_USER }}/despliegue"
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ghcr.io/martinsangucho/ulloa:1.0.5
 
-      - name: Despliegue de los servicios
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          password: ${{ secrets.VPS_PASSWORD }}
-          port: ${{ secrets.VPS_SSH_PORT }}
-          script: |
-            echo "✅ Desplegando servicios"
-            echo "Iniciando despliegue en /home/${{ secrets.VPS_USER }}/despliegue"
-            cd /home/${{ secrets.VPS_USER }}/despliegue
-
-            echo "==> Descargando imagen: ${{ env.IMAGE_TAG }}"
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
-            docker pull ${{ env.IMAGE_TAG }}
-
-            docker stack rm ulloa || true
-            sleep 30
-
-            echo "==> Desplegando stack ulloa..."
-            docker stack deploy -c stack.yml --with-registry-auth ulloa
